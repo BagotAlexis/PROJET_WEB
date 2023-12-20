@@ -1,0 +1,102 @@
+/* Apply a natural box layout model to all elements */
+*, *:before, *:after {
+    box-sizing: border-box;
+}
+
+/* Set the width of body to be 100% of the viewport */
+body {
+    
+    margin-right: 400px; /* Margin equal to the dashboard width */
+    padding: 20px; /* Adjust padding as needed */
+    width: 100%;
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+
+/* Ensure that each section takes the full available width */
+section {
+    margin-right: 400px; /* Margin equal to the dashboard width */
+    padding: 20px; /* Adjust padding as needed */
+    margin: auto; /* Center the section if less than 100% width */
+    box-sizing: border-box; /* Include padding in the width calculation */
+}
+
+/* Set form elements to take 100% width of their parent section */
+form {
+    
+    margin-right: 400px; /* Margin equal to the dashboard width */
+    padding: 20px; /* Adjust padding as needed */
+}
+
+/* Set the form input fields to take 100% width of their parent form */
+input[type="text"],
+input[type="number"],
+input[type="date"],
+textarea {
+    width: calc(100% - 20px); /* Adjusting for padding */
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+}
+
+/* Adjust the width of select element */
+select {
+    width: calc(100% - 20px); /* Adjusting for padding */
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+}
+
+/* Style the submit button */
+input[type="submit"] {
+    width: auto; /* Allow the button to grow with content */
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+/* Make tables take full width */
+table {
+    
+    margin-right: 400px; /* Margin equal to the dashboard width */
+    padding: 20px; /* Adjust padding as needed */
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 10px;
+    text-align: left;
+    border: 1px solid #ccc;
+}
+
+/* Make sure table header takes full width */
+thead th {
+    width: 20%; /* Adjust this based on your table structure */
+}
+
+/* Additional global styles */
+h2 {
+    margin-bottom: 20px;
+}
+
+.dashboard {
+    width: 400px; /* or your preferred width */
+    height: auto; /* Adjust height automatically based on content */
+    overflow-y: auto; /* Enables scroll if content is too long */
+    position: fixed; /* Fixed position could be helpful if you want it always visible */
+    top: 0;
+    right: 0;
+    bottom: 0; /* Ensures it doesn't go beyond the viewport height */
+    background-color: #f3f3f3;
+    box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+    padding-bottom: 20px; /* Adjust padding as needed */
+}
+
+canvas {
+    max-height: 400px; /* Adjust to your preferred height */
+    margin-bottom: 20px; /* Space between canvases */
+    display: block; /* Ensures the canvas is a block element */
+}
+
