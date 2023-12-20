@@ -20,6 +20,15 @@ $livres = $stmtLivres->fetchAll();
 // Récupération des associations auteurs-livres
 $stmtEcrits = $db->query("SELECT e.Id, a.Nom AS AuteurNom, l.Titre AS LivreTitre FROM Ecrit e JOIN Auteur a ON e.Num = a.Num JOIN Livre l ON e.ISSN = l.ISSN");
 $ecrits = $stmtEcrits->fetchAll();
+
+// Préparation des données pour les graphiques
+$domaineCounts = array_count_values(array_column($livres, 'Domaine'));
+$barLabels = json_encode(array_keys($domaineCounts));
+$barData = json_encode(array_values($domaineCounts));
+
+// Les données pour le graphique en camembert sont les mêmes que pour le graphique en barres dans cet exemple
+$pieLabels = $barLabels;
+$pieData = $barData;
 ?>
 
 <!DOCTYPE html>
@@ -27,9 +36,10 @@ $ecrits = $stmtEcrits->fetchAll();
 <head>
     <meta charset="UTF-8">
     <title>Bienvenue</title>
-    <!-- Insérez ici le lien vers votre CSS et les scripts JavaScript nécessaires -->
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body class="container">
     <h1>Bonjour, <?php echo htmlspecialchars($username); ?>!</h1>
 
     <!-- Ajout de livres -->
@@ -175,6 +185,59 @@ $ecrits = $stmtEcrits->fetchAll();
     </form>
 </section>
 
-    <a href="logout.php">Déconnexion</a>
+<!-- Dashboard pour les graphiques à droite -->
+<div class="dashboard" style="flex-grow:  1;width: 400px;">
+            <h2>Tableau de Bord</h2>
+            <canvas id="booksChart"></canvas>
+            <canvas id="domainPieChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+    const barCtx = document.getElementById('booksChart').getContext('2d');
+    const barChart = new Chart(barCtx, {
+        type: 'bar',
+        data: {
+            labels: <?php echo $barLabels; ?>,
+            datasets: [{
+                label: 'Nombre de Livres par Domaine',
+                data: <?php echo $barData; ?>,
+                backgroundColor: 'rgba(0, 123, 255, 0.5)',
+                borderColor: 'rgba(0, 123, 255, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    const pieCtx = document.getElementById('domainPieChart').getContext('2d');
+    const pieChart = new Chart(pieCtx, {
+        type: 'pie',
+        data: {
+            labels: <?php echo $pieLabels; ?>,
+            datasets: [{
+                data: <?php echo $pieData; ?>,
+                backgroundColor: [
+                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
+                ],
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+</script>
+
+
+
+    <a href="logout.php" class="logout-button">Déconnexion</a>
 </body>
 </html>
