@@ -234,10 +234,22 @@ $pieData = $barData;
             maintainAspectRatio: false
         }
     });
+    
+    function confirmLogout() {
+    // Display a confirmation dialog
+    var confirmAction = confirm("Êtes-vous sûr de bien vouloir vous déconnecter?");
+    // Check if the user pressed "OK"
+    if (confirmAction) {
+      // User pressed "OK", navigate to the logout page
+      window.location.href = 'logout.php';
+    }
+    // User pressed "Cancel", prevent the navigation
+    return false;
+  }
 </script>
 
 
 
-    <a href="logout.php" class="logout-button">Déconnexion</a>
+    <a href="logout.php" class="logout-button" onclick="return confirmLogout()">Déconnexion</a> 
 </body>
 </html>
