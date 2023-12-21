@@ -1,43 +1,53 @@
 <?php
 session_start();
 
-$db = new PDO('mysql:host=localhost;dbname=bibliotheque_numerique', 'root', '');
+try {
+    $db = new PDO('mysql:host=localhost;dbname=projet_web', 'root', '', [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_EMULATE_PREPARES => false,
+    ]);
+} catch (PDOException $e) {
+    die("Erreur de connexion à la base de données: " . $e->getMessage());
+}
 
-// Gestion des cookies
-if (!isset($_COOKIE['cookie_accepted'])) {
-    echo '<script>
-            function showCookiePopup() {
-                document.getElementById("cookie-popup").style.display = "block";
-            }
-
-            function acceptCookies() {
-                document.cookie = "cookie_accepted=true; expires=Thu, 31 Dec 2099 23:59:59 UTC; path=/";
-                document.getElementById("cookie-popup").style.display = "none";
-            }
-        </script>';
-
-    echo '<div id="cookie-popup" style="display:none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 10px; background-color: #f2f2f2; border: 1px solid #ddd; border-radius: 5px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1); max-width: 400px; text-align: center;">
-            <p>This website uses cookies to ensure you get the best experience on our website.</p>
-            <button onclick="acceptCookies()">Accept</button>
-        </div>';
-
-    echo '<script>showCookiePopup();</script>';
+$livres = [];
+if (isset($_POST['search'])) {
+    $search = "%{$_POST['search']}%";
+    $stmt = $db->prepare("SELECT Livre.*, GROUP_CONCAT(DISTINCT Auteur.Nom ORDER BY Auteur.Nom ASC SEPARATOR ', ') AS Auteurs 
+                      FROM Livre 
+                      LEFT JOIN Ecrit ON Livre.ISSN = Ecrit.ISSN 
+                      LEFT JOIN Auteur ON Ecrit.Num = Auteur.Num 
+                      WHERE Livre.Titre LIKE :search OR Auteur.Nom LIKE :searchAuteur 
+                      GROUP BY Livre.ISSN");
+    $stmt->execute(['search' => $search, 'searchAuteur' => $search]);
+    $livres = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    $stmt = $db->query("SELECT Livre.*, GROUP_CONCAT(DISTINCT Auteur.Nom ORDER BY Auteur.Nom ASC SEPARATOR ', ') AS Auteurs 
+                        FROM Livre 
+                        LEFT JOIN Ecrit ON Livre.ISSN = Ecrit.ISSN 
+                        LEFT JOIN Auteur ON Ecrit.Num = Auteur.Num 
+                        GROUP BY Livre.ISSN");
+    $livres = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 if (isset($_POST['login'])) {
-    $username = $_POST['username'];
-    $password = $_POST['password'];
+    $username = filter_input(INPUT_POST, 'username', FILTER_SANITIZE_STRING);
+    $password = filter_input(INPUT_POST, 'password', FILTER_SANITIZE_STRING);
 
-    $stmt = $db->prepare("SELECT * FROM admin WHERE Nom = ?");
-    $stmt->execute([$username]);
-    $user = $stmt->fetch();
+    if ($username && $password) {
+        $stmt = $db->prepare("SELECT * FROM admin WHERE Nom = :username");
+        $stmt->execute(['username' => $username]);
+        $user = $stmt->fetch();
 
-    if ($user && password_verify($password, $user['Password'])) {
-        $_SESSION['user'] = $user['Nom'];
-        header('Location: welcome.php');
-        exit();
+        if ($user && password_verify($password, $user['Password'])) {
+            $_SESSION['user'] = $user['Nom'];
+            header('Location: welcome.php');
+            exit();
+        } else {
+            $error = "Invalid credentials";
+        }
     } else {
-        $error = "Erreur dans les données de login.";
+        $error = "Invalid input";
     }
 }
 ?>
@@ -46,101 +56,46 @@ if (isset($_POST['login'])) {
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Connexion</title>
+    <title>Recherche de Livres</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <header>
+        <form method="post">
+            <input type="text" name="search" placeholder="Rechercher un livre">
+            <button type="submit">Recherche</button>
+        </form>
+        <form method="post">
+            <input type="text" name="username" placeholder="Nom d'utilisateur" required>
+            <input type="password" name="password" placeholder="Mot de passe" required>
+            <button type="submit" name="login">Connexion</button>
+        </form>
+    </header>
+
+    <aside>
+        <!-- Filtres à implémenter -->
+    </aside>
+
+    <main>
+        <?php if ($livres): ?>
+            <ul>
+                <?php foreach ($livres as $livre): ?>
+                    <li>
+                        <h3><?php echo htmlspecialchars($livre['Titre']); ?></h3>
+                        <p>Auteur(s): <?php echo htmlspecialchars($livre['Auteurs']); ?></p>
+                        <p>Nombre de pages: <?php echo htmlspecialchars($livre['Nbpages']); ?></p>
+                        <p>Domaine: <?php echo htmlspecialchars($livre['Domaine']); ?></p>
+                        <!-- Plus d'infos si nécessaire -->
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php else: ?>
+            <p>Aucun livre trouvé.</p>
+        <?php endif; ?>
+    </main>
+
     <?php if (isset($error)): ?>
-        <p><?php echo $error; ?></p>
+        <p class="error"><?php echo $error; ?></p>
     <?php endif; ?>
-
-    <form method="post">
-        <label for="username">Nom d'utilisateur :</label>
-        <input type="text" name="username" id="username" required>
-
-        <label for="password">Mot de passe :</label>
-        <input type="password" name="password" id="password" required>
-
-        <button type="submit" name="login">Se connecter</button>
-    </form>
-</body>
-
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Connexion</title>
-        <!-- Barre de recherche -->
-        <form action="search_results.php" method="get">
-        <input type="text" name="search_query" placeholder="Rechercher livres ou auteurs..." required>
-        <button type="submit">Rechercher</button>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            color: #333;
-            background-color: #e9ecef;
-        }
-        form {
-            max-width: 300px;
-            margin: 50px auto;
-            padding: 20px;
-            background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-        }
-        input[type="text"], input[type="password"] {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        button {
-            width: 100%;
-            padding: 10px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .error-message {
-            color: red;
-        }
-        /* Style pour la popup de cookies */
-        #cookie-popup {
-            background-color: #ffffff;
-            color: #000000;
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
-            text-align: center;
-        }
-        @media (max-width: 600px) {
-            form {
-                width: 90%;
-                margin: 20px auto;
-            }
-        }
-    </style>
-</head>
-
 </body>
 </html>
-
