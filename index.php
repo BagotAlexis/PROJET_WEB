@@ -10,31 +10,50 @@ try {
     die("Erreur de connexion à la base de données: " . $e->getMessage());
 }
 
-$livres = [];
-if (isset($_POST['search'])) {
-    $search = "%{$_POST['search']}%";
-    $stmt = $db->prepare("SELECT Livre.*, GROUP_CONCAT(DISTINCT Auteur.Nom ORDER BY Auteur.Nom ASC SEPARATOR ', ') AS Auteurs 
-                      FROM Livre 
-                      LEFT JOIN Ecrit ON Livre.ISSN = Ecrit.ISSN 
-                      LEFT JOIN Auteur ON Ecrit.Num = Auteur.Num 
-                      WHERE Livre.Titre LIKE :search OR Auteur.Nom LIKE :searchAuteur 
-                      GROUP BY Livre.ISSN");
-    $stmt->execute(['search' => $search, 'searchAuteur' => $search]);
-    $livres = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} else {
-    $stmt = $db->query("SELECT Livre.*, GROUP_CONCAT(DISTINCT Auteur.Nom ORDER BY Auteur.Nom ASC SEPARATOR ', ') AS Auteurs 
-                        FROM Livre 
-                        LEFT JOIN Ecrit ON Livre.ISSN = Ecrit.ISSN 
-                        LEFT JOIN Auteur ON Ecrit.Num = Auteur.Num 
-                        GROUP BY Livre.ISSN");
-    $livres = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Récupération des domaines existants
+$stmtDomaines = $db->query("SELECT DISTINCT Domaine FROM Livre ORDER BY Domaine");
+$domaines = $stmtDomaines->fetchAll(PDO::FETCH_COLUMN);
+
+// Récupération et filtrage des livres
+$searchTerm = isset($_POST['search']) ? $_POST['search'] : '';
+$selectedDomaine = isset($_POST['domaine']) ? $_POST['domaine'] : '';
+$whereClauses = [];
+$params = [];
+
+if ($searchTerm) {
+    $whereClauses[] = "(Livre.Titre LIKE :searchTerm)";
+    $params['searchTerm'] = "%$searchTerm%";
 }
 
+if ($selectedDomaine && $selectedDomaine !== "Tous les domaines") {
+    $whereClauses[] = "Livre.Domaine = :domaine";
+    $params['domaine'] = $selectedDomaine;
+}
+
+$query = "SELECT Livre.*, GROUP_CONCAT(DISTINCT Auteur.Nom ORDER BY Auteur.Nom ASC SEPARATOR ', ') AS Auteurs 
+          FROM Livre 
+          LEFT JOIN Ecrit ON Livre.ISSN = Ecrit.ISSN 
+          LEFT JOIN Auteur ON Ecrit.Num = Auteur.Num";
+
+if ($whereClauses) {
+    $query .= " WHERE " . implode(' AND ', $whereClauses);
+}
+
+$query .= " GROUP BY Livre.ISSN";
+
+$stmtLivres = $db->prepare($query);
+$stmtLivres->execute($params);
+$livres = $stmtLivres->fetchAll(PDO::FETCH_ASSOC);
+
+
+// Gestion de la connexion utilisateur
+$error = '';
 if (isset($_POST['login'])) {
     $username = filter_input(INPUT_POST, 'username', FILTER_SANITIZE_STRING);
     $password = filter_input(INPUT_POST, 'password', FILTER_SANITIZE_STRING);
 
     if ($username && $password) {
+        // Remplacez 'username' par le nom réel de la colonne, par exemple 'Nom'
         $stmt = $db->prepare("SELECT * FROM admin WHERE Nom = :username");
         $stmt->execute(['username' => $username]);
         $user = $stmt->fetch();
@@ -44,14 +63,20 @@ if (isset($_POST['login'])) {
             header('Location: welcome.php');
             exit();
         } else {
-            $error = "Invalid credentials";
+            $error = "Identifiants invalides";
         }
     } else {
-        $error = "Invalid input";
+        $error = "Entrée invalide";
     }
 }
-?>
 
+// Annulation de la recherche et affichage de tous les livres
+if (isset($_POST['cancel_search'])) {
+    header('Location: index.php');
+    exit();
+}
+
+?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -62,8 +87,17 @@ if (isset($_POST['login'])) {
 <body>
     <header>
         <form method="post">
-            <input type="text" name="search" placeholder="Rechercher un livre">
-            <button type="submit">Recherche</button>
+            <input type="text" name="search" placeholder="Rechercher un livre" value="<?php echo htmlspecialchars($searchTerm); ?>">
+            <select name="domaine">
+                <option value="">Tous les domaines</option>
+                <?php foreach ($domaines as $domaine): ?>
+                    <option value="<?php echo htmlspecialchars($domaine); ?>" <?php echo ($selectedDomaine === $domaine) ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars($domaine); ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <button type="submit" name="submit_search">Rechercher</button>
+            <button type="submit" name="cancel_search">Annuler</button>
         </form>
         <form method="post">
             <input type="text" name="username" placeholder="Nom d'utilisateur" required>
@@ -72,11 +106,7 @@ if (isset($_POST['login'])) {
         </form>
     </header>
 
-    <aside>
-        <!-- Filtres à implémenter -->
-    </aside>
-
-    <main>
+    <main id="book-info">
         <?php if ($livres): ?>
             <ul>
                 <?php foreach ($livres as $livre): ?>
@@ -85,7 +115,6 @@ if (isset($_POST['login'])) {
                         <p>Auteur(s): <?php echo htmlspecialchars($livre['Auteurs']); ?></p>
                         <p>Nombre de pages: <?php echo htmlspecialchars($livre['Nbpages']); ?></p>
                         <p>Domaine: <?php echo htmlspecialchars($livre['Domaine']); ?></p>
-                        <!-- Plus d'infos si nécessaire -->
                     </li>
                 <?php endforeach; ?>
             </ul>
@@ -94,7 +123,7 @@ if (isset($_POST['login'])) {
         <?php endif; ?>
     </main>
 
-    <?php if (isset($error)): ?>
+    <?php if ($error): ?>
         <p class="error"><?php echo $error; ?></p>
     <?php endif; ?>
 </body>
