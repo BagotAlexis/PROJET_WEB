@@ -10,41 +10,76 @@ try {
     die("Erreur de connexion à la base de données: " . $e->getMessage());
 }
 
-// Récupération des domaines existants
+// Initialisation des variables pour les filtres
+$params = [];
+$whereClauses = [];
+
+// Obtention de la valeur maximale de pages dans la base de données
+$stmtMaxPages = $db->query("SELECT MAX(Nbpages) AS MaxPages FROM Livre");
+$maxPagesFromDb = $stmtMaxPages->fetch(PDO::FETCH_ASSOC);
+$maxPagesValue = $maxPagesFromDb['MaxPages'];
+
+// Récupération et application du filtre sur le nombre de pages
+$minPages = isset($_POST['minPages']) ? (int)$_POST['minPages'] : 0;
+$maxPages = isset($_POST['maxPages']) ? (int)$_POST['maxPages'] : $maxPagesValue; 
+
+
+if ($minPages >= 0 && $maxPages > 0) {
+    $whereClauses[] = "Livre.Nbpages BETWEEN :minPages AND :maxPages";
+    $params[':minPages'] = $minPages;
+    $params[':maxPages'] = $maxPages;
+}
+
+// Récupération des années de naissance des auteurs existants pour le filtre
+$stmtAnneesNaissance = $db->query("SELECT DISTINCT YEAR(DateNaissance) AS AnneeNaissance FROM Auteur ORDER BY AnneeNaissance");
+$anneesNaissance = $stmtAnneesNaissance->fetchAll(PDO::FETCH_COLUMN);
+
+// Récupération et application du filtre sur l'année de naissance de l'auteur
+$selectedAnneeNaissance = isset($_POST['anneeNaissance']) ? (int)$_POST['anneeNaissance'] : 0;
+if ($selectedAnneeNaissance > 0) {
+    $whereClauses[] = "YEAR(Auteur.DateNaissance) = :anneeNaissance";
+    $params[':anneeNaissance'] = $selectedAnneeNaissance;
+}
+
+// Récupération des domaines existants pour le filtre
 $stmtDomaines = $db->query("SELECT DISTINCT Domaine FROM Livre ORDER BY Domaine");
 $domaines = $stmtDomaines->fetchAll(PDO::FETCH_COLUMN);
 
-// Récupération et filtrage des livres
+// Application du filtre sur le domaine
 $searchTerm = isset($_POST['search']) ? $_POST['search'] : '';
 $selectedDomaine = isset($_POST['domaine']) ? $_POST['domaine'] : '';
-$whereClauses = [];
-$params = [];
-
-if ($searchTerm) {
-    $whereClauses[] = "(Livre.Titre LIKE :searchTerm)";
-    $params['searchTerm'] = "%$searchTerm%";
-}
-
-if ($selectedDomaine && $selectedDomaine !== "Tous les domaines") {
+if (!empty($selectedDomaine) && $selectedDomaine !== "Tous les domaines") {
     $whereClauses[] = "Livre.Domaine = :domaine";
-    $params['domaine'] = $selectedDomaine;
+    $params[':domaine'] = $selectedDomaine;
 }
 
+// Construction de la requête SQL principale avec les filtres
 $query = "SELECT Livre.*, GROUP_CONCAT(DISTINCT Auteur.Nom ORDER BY Auteur.Nom ASC SEPARATOR ', ') AS Auteurs 
           FROM Livre 
           LEFT JOIN Ecrit ON Livre.ISSN = Ecrit.ISSN 
           LEFT JOIN Auteur ON Ecrit.Num = Auteur.Num";
 
-if ($whereClauses) {
+if (!empty($searchTerm)) {
+    $search = "%{$searchTerm}%";
+    $whereClauses[] = "(Livre.Titre LIKE :searchTermTitle OR Auteur.Nom LIKE :searchTermAuthor)";
+    $params[':searchTermTitle'] = $search;
+    $params[':searchTermAuthor'] = $search;
+}
+
+if (!empty($whereClauses)) {
     $query .= " WHERE " . implode(' AND ', $whereClauses);
 }
 
-$query .= " GROUP BY Livre.ISSN";
+$query .= " GROUP BY Livre.ISSN ORDER BY Livre.Titre ASC";
 
+// Exécution de la requête
 $stmtLivres = $db->prepare($query);
-$stmtLivres->execute($params);
-$livres = $stmtLivres->fetchAll(PDO::FETCH_ASSOC);
-
+try {
+    $stmtLivres->execute($params);
+    $livres = $stmtLivres->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    die("Erreur lors de l'exécution de la requête: " . $e->getMessage());
+}
 
 // Gestion de la connexion utilisateur
 $error = '';
@@ -53,9 +88,8 @@ if (isset($_POST['login'])) {
     $password = filter_input(INPUT_POST, 'password', FILTER_SANITIZE_STRING);
 
     if ($username && $password) {
-        // Remplacez 'username' par le nom réel de la colonne, par exemple 'Nom'
         $stmt = $db->prepare("SELECT * FROM admin WHERE Nom = :username");
-        $stmt->execute(['username' => $username]);
+        $stmt->execute([':username' => $username]);
         $user = $stmt->fetch();
 
         if ($user && password_verify($password, $user['Password'])) {
@@ -82,22 +116,14 @@ if (isset($_POST['cancel_search'])) {
 <head>
     <meta charset="UTF-8">
     <title>Recherche de Livres</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="main_page.css">
 </head>
 <body>
     <header>
         <form method="post">
             <input type="text" name="search" placeholder="Rechercher un livre" value="<?php echo htmlspecialchars($searchTerm); ?>">
-            <select name="domaine">
-                <option value="">Tous les domaines</option>
-                <?php foreach ($domaines as $domaine): ?>
-                    <option value="<?php echo htmlspecialchars($domaine); ?>" <?php echo ($selectedDomaine === $domaine) ? 'selected' : ''; ?>>
-                        <?php echo htmlspecialchars($domaine); ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
             <button type="submit" name="submit_search">Rechercher</button>
-            <button type="submit" name="cancel_search">Annuler</button>
+            <button type="submit" name="cancel_search">Annuler la recherche</button>
         </form>
         <form method="post">
             <input type="text" name="username" placeholder="Nom d'utilisateur" required>
@@ -105,6 +131,50 @@ if (isset($_POST['cancel_search'])) {
             <button type="submit" name="login">Connexion</button>
         </form>
     </header>
+
+    <aside id="filters">
+        <form method="post" id="filters-form">
+            <div>
+                <label for="domaine">Domaine:</label>
+                <select name="domaine">
+                    <option value="">Tous les domaines</option>
+                    <?php foreach ($domaines as $domaine): ?>
+                        <option value="<?php echo htmlspecialchars($domaine); ?>" <?php echo ($selectedDomaine === $domaine) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($domaine); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div>
+                <label for="minPages">Nombre de pages minimum :</label>
+                <input type="range" id="minPages" name="minPages" min="0" max="1000" value="<?php echo $minPages; ?>" oninput="this.nextElementSibling.value = this.value">
+                <output><?php echo $minPages; ?></output>
+            </div>
+
+            <div>
+                <label for="maxPages">Nombre de pages maximum :</label>
+                <input type="range" id="maxPages" name="maxPages" min="0" max="<?php echo $maxPagesValue; ?>" value="<?php echo $maxPages; ?>" oninput="this.nextElementSibling.value = this.value">
+                <output><?php echo $maxPages; ?></output>
+            </div>
+            
+            <div>
+                <label for="anneeNaissance">Année de naissance de l'auteur:</label>
+                <select name="anneeNaissance">
+                    <option value="">Toutes les années</option>
+                    <?php foreach ($anneesNaissance as $annee): ?>
+                        <option value="<?php echo htmlspecialchars($annee); ?>" <?php echo ($selectedAnneeNaissance === $annee) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($annee); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <input type="hidden" name="search" value="<?php echo htmlspecialchars($searchTerm); ?>">
+
+            <button type="submit" name="apply_filters">Rechercher avec filtres</button>
+        </form>
+    </aside>
 
     <main id="book-info">
         <?php if ($livres): ?>

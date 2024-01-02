@@ -21,6 +21,11 @@ $livres = $stmtLivres->fetchAll();
 $stmtEcrits = $db->query("SELECT e.Id, a.Nom AS AuteurNom, l.Titre AS LivreTitre FROM Ecrit e JOIN Auteur a ON e.Num = a.Num JOIN Livre l ON e.ISSN = l.ISSN");
 $ecrits = $stmtEcrits->fetchAll();
 
+// Récupération des admins
+$stmtAdmins = $db->query("SELECT Id, Mail, Nom, Prenom, Tel FROM admin");
+$admins = $stmtAdmins->fetchAll(PDO::FETCH_ASSOC);
+
+
 // Préparation des données pour les graphiques
 $domaineCounts = array_count_values(array_column($livres, 'Domaine'));
 $barLabels = json_encode(array_keys($domaineCounts));
@@ -40,7 +45,7 @@ $pieData = $barData;
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="container">
-    <h1>Bonjour, <?php echo htmlspecialchars($username); ?>!</h1>
+    <h1>Bonjour <?php echo htmlspecialchars($username); ?>!</h1>
 
     <!-- Ajout de livres -->
     <section>
@@ -184,6 +189,62 @@ $pieData = $barData;
         <input type="submit" value="Supprimer Auteur">
     </form>
 </section>
+
+<section>
+    <h2>Ajouter un Admin</h2>
+    <form action="ajouter_admin.php" method="post">
+        <input type="email" name="Mail" placeholder="Email" required>
+        <input type="text" name="Nom" placeholder="Nom" required>
+        <input type="text" name="Prenom" placeholder="Prénom" required>
+        <input type="password" name="Password" placeholder="Mot de passe" required>
+        <input type="tel" name="Tel" placeholder="Téléphone">
+        <input type="submit" value="Ajouter Admin">
+    </form>
+</section>
+
+<section>
+    <h2>Supprimer un Admin</h2>
+    <form action="supprimer_admin.php" method="post">
+        <select name="NomAAdminSupprimer" required>
+            <option value="">Sélectionnez un admin (le nom doit être unique)</option>
+            <?php foreach ($admins as $admin): ?>
+                <option value="<?php echo htmlspecialchars($admin['Nom']); ?>">
+                    <?php echo htmlspecialchars($admin['Nom']) . " " . htmlspecialchars($admin['Prenom']); ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+        <input type="submit" value="Supprimer Admin">
+    </form>
+</section>
+
+
+<section>
+    <h2>Liste des Admins</h2>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Email</th>
+                <th>Nom</th>
+                <th>Prénom</th>
+                <th>Téléphone</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($admins as $admin): ?>
+                <tr>
+                    <td><?php echo htmlspecialchars($admin['Id']); ?></td>
+                    <td><?php echo htmlspecialchars($admin['Mail']); ?></td>
+                    <td><?php echo htmlspecialchars($admin['Nom']); ?></td>
+                    <td><?php echo htmlspecialchars($admin['Prenom']); ?></td>
+                    <td><?php echo htmlspecialchars($admin['Tel']); ?></td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+</section>
+
+
 
 <!-- Dashboard pour les graphiques à droite -->
 <div class="dashboard" style="flex-grow:  1;width: 400px;">

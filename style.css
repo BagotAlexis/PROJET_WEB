@@ -17,8 +17,11 @@ body {
 section {
     margin-right: 400px; /* Margin equal to the dashboard width */
     padding: 20px; /* Adjust padding as needed */
+    margin-bottom: 20px; /* Espacement entre les sections */
+    border-radius: 4px; /* Bordures arrondies pour adoucir les coins */
     margin: auto; /* Center the section if less than 100% width */
     box-sizing: border-box; /* Include padding in the width calculation */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Ombre portée pour un effet de profondeur */
 }
 
 /* Set form elements to take 100% width of their parent section */
@@ -37,6 +40,18 @@ textarea {
     padding: 10px;
     margin-bottom: 10px;
     border: 1px solid #ccc;
+}
+
+section form input[type="text"],
+section form input[type="email"],
+section form input[type="password"],
+section form input[type="tel"],
+section form input[type="date"] {
+    width: 100%; /* Full width */
+    padding: 10px; /* Comfortable padding */
+    margin-bottom: 10px; /* Space between the fields */
+    border: 1px solid #ccc; /* Subtle border */
+    border-radius: 4px; /* Rounded corners */
 }
 
 /* Adjust the width of select element */
