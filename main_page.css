@@ -1,13 +1,21 @@
+/* Apply a natural box layout model to all elements */
+*, *:before, *:after {
+    box-sizing: border-box;
+}
+
+/* Set the width of body to be 100% of the viewport */
 body {
     margin: 0;
+    padding: 0;
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
     background-color: #f0f3f4;
 }
 
+/* Header styling */
 header {
     display: flex;
-    justify-content: center;
-    padding: 10px 0;
+    justify-content: space-between;
+    padding: 10px 20px;
     background-color: #333;
     color: #fff;
     position: fixed;
@@ -16,36 +24,53 @@ header {
     z-index: 10;
 }
 
-header form {
-    width: 100%;
+/* Search form styling */
+.search-form {
+    flex-grow: 1;
     max-width: 800px;
     display: flex;
     justify-content: space-between;
-    align-items: center;
 }
 
-input[type="text"], input[type="password"], input[type="submit"], button {
+/* Login form styling */
+.login-form {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Common input styles */
+input[type="text"],
+input[type="password"],
+input[type="submit"],
+button {
     padding: 10px;
-    margin: 0 5px;
+    margin-left: 5px;
     border-radius: 5px;
     border: none;
 }
 
-input[type="text"], input[type="password"] {
+input[type="text"],
+input[type="password"] {
     flex-grow: 1;
 }
 
-input[type="submit"], button {
+input[type="submit"],
+button {
     background-color: #e94560;
     color: white;
     cursor: pointer;
 }
 
-input[type="submit"]:hover, button:hover {
+input[type="submit"]:hover,
+button:hover {
     background-color: #a43552;
 }
 
+/* Filters bar styling */
 #filters {
+    display: flex;
+    flex-direction: column;
     width: 300px;
     position: fixed;
     top: 50px;
@@ -57,27 +82,32 @@ input[type="submit"]:hover, button:hover {
     overflow-y: auto;
     z-index: 5;
     box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+    gap: 40px;
 }
 
 #filters form {
+    padding-top: 60px;
     display: flex;
     flex-direction: column;
-    gap: 30px; /* Increased space between form elements */
+    gap: 60px;  
 }
 
+/* Main content area styling */
 main {
+    padding-top: 60px; /* Offset for fixed header */
+    margin-left: 300px; /* Offset for filters bar */
     padding: 20px;
-    margin-top: 50px; /* Offset for the header */
-    margin-left: 350px; /* Offset for the filter bar */
-    overflow-y: auto;
+    margin-top: 70px; 
 }
 
 main ul {
-    list-style-type: none;
+    list-style: none;
     padding: 0;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 20px;
+    max-height: calc(100vh - 70px);     
+    overflow-y: auto;
 }
 
 main li {
@@ -95,9 +125,9 @@ main li h3 {
 
 main li p {
     color: #333;
-    margin: 5px 0;
 }
 
+/* Error message styling */
 .error {
     color: #D8000C;
     background-color: #FFD2D2;
@@ -107,25 +137,33 @@ main li p {
     margin: 10px 0;
 }
 
+/* Responsive design adjustments */
 @media (max-width: 600px) {
-    header, #filters, main {
-        margin-left: 0;
-        width: auto;
+    /* Responsive adjustments if needed */
+    header,
+    #filters,
+    main {
         padding: 10px;
     }
 
     header {
         flex-direction: column;
+        /* Ensure that the header doesn't cover the content */
+        height: auto;
     }
 
-    #filters {
+    #filters {  
+        /* Full width for mobile view */
         width: 100%;
         height: auto;
-        position: relative;
-        top: 0;
+        position: static;
+        top: auto;
+        gap: 30px;
     }
 
     main {
-        margin-top: 120px; /* Increased top margin to account for stacked header */
+        /* Remove margin-left for mobile view */
+        margin-left: 0;
+        margin-top: 20px; /* Provide space below the header */
     }
 }

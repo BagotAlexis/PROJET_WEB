@@ -117,19 +117,22 @@ if (isset($_POST['cancel_search'])) {
     <meta charset="UTF-8">
     <title>Recherche de Livres</title>
     <link rel="stylesheet" href="main_page.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.8.1/font/bootstrap-icons.min.css" rel="stylesheet">
 </head>
 <body>
-    <header>
-        <form method="post">
+<header>
+        <form class="search-form" method="post">
             <input type="text" name="search" placeholder="Rechercher un livre" value="<?php echo htmlspecialchars($searchTerm); ?>">
-            <button type="submit" name="submit_search">Rechercher</button>
-            <button type="submit" name="cancel_search">Annuler la recherche</button>
+            <button type="submit" name="submit_search"><i class="bi bi-search"></i> Rechercher</button>
+            <button type="submit" name="cancel_search"> <i class="bi bi-x-lg"></i> Annuler la recherche</button>
         </form>
-        <form method="post">
-            <input type="text" name="username" placeholder="Nom d'utilisateur" required>
-            <input type="password" name="password" placeholder="Mot de passe" required>
-            <button type="submit" name="login">Connexion</button>
-        </form>
+        <div class="login-form">
+            <form method="post">
+                <input type="text" name="username" placeholder="Nom d'utilisateur" required>
+                <input type="password" name="password" placeholder="Mot de passe" required>
+                <button type="submit" name="login"><i class="bi bi-gear-fill"> Connexion</i></button>
+            </form>
+        </div>
     </header>
 
     <aside id="filters">
@@ -172,7 +175,7 @@ if (isset($_POST['cancel_search'])) {
 
             <input type="hidden" name="search" value="<?php echo htmlspecialchars($searchTerm); ?>">
 
-            <button type="submit" name="apply_filters">Rechercher avec filtres</button>
+            <button type="submit" name="apply_filters"><i class="bi bi-search"> Rechercher avec filtres</i> </button>
         </form>
     </aside>
 
