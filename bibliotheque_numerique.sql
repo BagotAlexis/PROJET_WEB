@@ -150,4 +150,7 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 
+-- Ajout d'un administrateur
+INSERT INTO `admin` (`Nom`, `Prenom`, `Mail`, `Password`, `Tel`) VALUES
+('Prof', 'Test', 'test@test.com', '$2y$10$4E/4S/pRi1pz/dBMplNCT.JzhYS6y/vuHucXmSe2Ueu93or6gokja', '0101010101');
 
